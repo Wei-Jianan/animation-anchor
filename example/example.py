@@ -11,5 +11,5 @@ if __name__ == '__main__':
     video_file = anchor.inference('啦,啦,啦，我是卖报的小当家, 大风大雨都不怕', template_name='aide')
     with open('example.mp4', 'wb') as f:
         shutil.copyfileobj(video_file, f)
-    video_file.close
+    video_file.close()
 
