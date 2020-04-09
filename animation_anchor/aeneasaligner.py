@@ -2,6 +2,7 @@ import os, json
 import pypinyin
 import tempfile
 import subprocess
+import ffmpeg
 from collections import namedtuple
 from aeneas.executetask import ExecuteTask
 from aeneas.task import Task
@@ -41,9 +42,9 @@ class PhonemeForcedAligner:
         fragments = task.sync_map_leaves()[1:-1]
         # assert len(fragments) == len(texts), 'the length of aligned phenemes must be equal to the length of texts.'
         # phenemes = pypinyin.pinhyin(texts, style=pypinyin.Style.NORMAL)
-        pheneme_durations = [
-            {'phoneme': ''.join([pinyin[0] for pinyin in pypinyin.pinyin(fragment.text, style=pypinyin.Style.NORMAL)]),
-             'time': str(float(fragment.length))} for fragment in fragments]
+        # pheneme_durations = [
+        #     {'phoneme': ''.join([pinyin[0] for pinyin in pypinyin.pinyin(fragment.text, style=pypinyin.Style.NORMAL)]),
+        #      'time': str(float(fragment.length))} for fragment in fragments]
         phoneme_durations = [PhonemeDuration(yinjie=pypinyin.pinyin(fragment.text, style=pypinyin.Style.NORMAL)[0][0],
                                              begin=float(fragment.begin),
                                              end=float(fragment.end)) for fragment in fragments]
@@ -59,7 +60,9 @@ class PhonemeForcedAligner:
 
     def _write_audio(self, media_path):
         f = tempfile.NamedTemporaryFile(mode='wb', suffix='.wav')
-        subprocess.check_call(['ffmpeg', '-y', '-i', media_path, f.name])
+        input_node = ffmpeg.input(media_path)
+        ffmpeg.output(input_node, f.name).run(overwrite_output=True, quiet=True)
+        # subprocess.check_call(['ffmpeg', '-y', '-i', media_path, f.name], )
         return f
 
     def align(self, text, media_path):

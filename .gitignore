@@ -142,4 +142,5 @@ cython_debug/
 dist/
 */assets/
 *.mp4
+.vscode
 
