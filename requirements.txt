@@ -1,0 +1,6 @@
+numpy
+opencv-python
+ffmpeg-python
+jieba
+pypinyin
+dlib
