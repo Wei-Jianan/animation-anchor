@@ -4,6 +4,7 @@ sys.path.append('../')
 import cv2
 from pathlib import Path
 from matplotlib import pyplot as plt
+import numpy as np
 from animation_anchor.synthesizer import TemplateFrameSeq, template_root
 from animation_anchor.generator import Viseme, viseme_root, VisemeFrameSeq
 from animation_anchor.utils.log import draw
@@ -14,19 +15,21 @@ class TestTemplateFrameSeq(unittest.TestCase):
         print('setting up')
         self.template_frame_seq = TemplateFrameSeq(template_root.joinpath('aide'),
                                                    fixed_landmarks=[[210, 234], [270, 270]])
-        viseme1 = Viseme('C1', begin=0.0, end=1.0, fixed_landmarks=[[0, 0],
+        viseme1 = Viseme('aide/C1', begin=0.0, end=1.0, fixed_landmarks=[[0, 0],
                                                                     [60, 36]])
-        viseme2 = Viseme('C1', begin=1.0, end=3.0, fixed_landmarks=[[0, 0],
+        viseme2 = Viseme('aide/C1', begin=1.0, end=3.0, fixed_landmarks=[[0, 0],
                                                                     [60, 36]])
-        viseme3 = Viseme('C1', begin=3.0, end=4.0, fixed_landmarks=[[0, 0],
+        viseme3 = Viseme('aide/C1', begin=3.0, end=4.0, fixed_landmarks=[[0, 0],
                                                                     [60, 36]])
-        viseme4 = Viseme('C1', begin=4.0, end=5.0, fixed_landmarks=[[0, 0],
+        viseme4 = Viseme('aide/C1', begin=4.0, end=5.0, fixed_landmarks=[[0, 0],
                                                                     [60, 36]])
-        viseme5 = Viseme('C1', begin=5.0, end=6.0, fixed_landmarks=[[0, 0],
+        viseme5 = Viseme('aide/C1', begin=5.0, end=6.0, fixed_landmarks=[[0, 0],
                                                                     [60, 36]])
-        viseme6 = Viseme('C1', begin=6.1, end=7.2, fixed_landmarks=[[0, 0],
+        viseme6 = Viseme('aide/C1', begin=6.1, end=7.2, fixed_landmarks=[[0, 0],
                                                                     [60, 36]])
         self.viseme_frame_seq = VisemeFrameSeq([viseme1, viseme2, viseme3, viseme4, viseme5, viseme6])
+        self.template_frame_seq_kuaile = TemplateFrameSeq(template_root.joinpath('kuailepingan'),
+                                                   fixed_landmarks=[[210, 234], [270, 270]])
 
     def test_getitem(self):
         template_frame_seq = TemplateFrameSeq(template_root.joinpath('aide'),
@@ -44,10 +47,18 @@ class TestTemplateFrameSeq(unittest.TestCase):
         #
         # plt.show()
 
+    def test_draw_template_frame(self):
+        frame, _ = self.template_frame_seq_kuaile[0]
+
+        fig = plt.figure()
+        plt.imshow(frame.astype(np.uint8))
+
+        plt.show()
+
     def test_synthesize_seq(self):
         import time
         start = time.time()
-        imgs = self.template_frame_seq.synthesize_seq(self.viseme_frame_seq)
+        imgs = list(self.template_frame_seq.synthesize_seq(self.viseme_frame_seq))
         print('{} frames took {} seconds.'.format(len(imgs), time.time() - start))
         fig = plt.figure()
         plt.imshow(imgs[-1] )

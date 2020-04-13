@@ -15,19 +15,19 @@ tmp_dir = os.path.join(os.path.dirname(__file__), 'tmp/')
 
 
 class Anchor:
-    def __init__(self, frame_rate, viseme_fixed_landmarks: Optional[List[List]] = None,
+    def __init__(self, frame_rate, viseme_kind, viseme_fixed_landmarks: Optional[List[List]] = None,
                  template_fixed_landmarks: Optional[List[List]] = None):
         self.frame_rate = frame_rate
         self.pheneme_forced_aligner = PhonemeForcedAligner()
         self.parser = parser_factory('AnimationParser')()
-        self.viseme_frame_generator = VisemeFrameSeqGenerator(frame_rate=self.frame_rate,
+        self.viseme_frame_generator = VisemeFrameSeqGenerator(frame_rate=self.frame_rate, viseme_kind=viseme_kind,
                                                               fixed_landmarks=viseme_fixed_landmarks)
         self.template_fixed_landmarks = template_fixed_landmarks
         self.synthesizer_pool = {}
 
-    def _tts(self, text):
+    def _tts(self, text, speed=150, gap=2):
         wav_file = NamedTemporaryFile(suffix='.wav')
-        subprocess.check_call(['espeak', '-vzh', text, '-w', wav_file.name])
+        subprocess.check_call(['espeak', '-s', str(speed), '-g', str(gap), '-vzh', text, '-w', wav_file.name])
         return wav_file
 
     def _get_video(self, img_seq, wav_path, frame_rate):
@@ -40,8 +40,7 @@ class Anchor:
              video_with_voice_file.name])
         return video_with_voice_file, video_file
 
-
-    def write_video(self, img_seq, wav_file, debug=False):
+    def write_video(self, img_seq, wav_path, debug=False):
         video_file = NamedTemporaryFile(suffix='.mp4')
         video_with_voice_file = NamedTemporaryFile(suffix='.mp4')
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -49,12 +48,12 @@ class Anchor:
         img = next(img_iter)
         out = cv2.VideoWriter(video_file.name, fourcc, self.frame_rate, (img.shape[1], img.shape[0]))
         for img in img_iter:
-        # while True:
+            # while True:
             # img = next(img_iter)
             out.write(cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
         out.release()
         v = ffmpeg.input(video_file.name).video
-        a = ffmpeg.input(wav_file.name).audio
+        a = ffmpeg.input(wav_path).audio
         jointed = ffmpeg.concat(v, a, v=1, a=1)
         ffmpeg.output(jointed, video_with_voice_file.name).run(overwrite_output=True, quiet=True)
 
@@ -81,5 +80,5 @@ class Anchor:
         video_synthesizer = self.synthesizer_pool[template_name]
         img_seq = video_synthesizer.synthesize(viseme_frame_seq)
         # video_with_voice_file, video_file = self._get_video(img_seq, wav_path, self.frame_rate)
-        video_with_voice_file = self.write_video(img_seq, wav_file)
+        video_with_voice_file = self.write_video(img_seq, wav_path)
         return video_with_voice_file

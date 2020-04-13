@@ -11,7 +11,6 @@ from ..utils import read_landmarks, read_frames
 
 class TemplateFrameSeq:
     template_root = Path(__file__).parent.joinpath('../assets/template').resolve()
-    PREDICTOR_PATH = "/public/home/G19830015/z/face2face-demo/shape_predictor_68_face_landmarks.dat"
     ALIGN_POINTS = [0, 1]
 
     # Points from the second image to overlay on the first. The convex hull of each
