@@ -54,7 +54,7 @@ class LOG:
         # dependencies.
         cls.level = logging.getLevelName('INFO')
         log_message_format = (
-            '{asctime} | {levelname:8} | {process:5} | {name} | {message}'
+            '{asctime} | {levelname:8} | p:{process:5}, t:{threadName:8} | {name} | {message}'
         )
 
         formatter = logging.Formatter(log_message_format, style='{')

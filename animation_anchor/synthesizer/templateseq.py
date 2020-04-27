@@ -46,6 +46,8 @@ class TemplateFrameSeq:
     def synthesize(self, viseme_frame_landmark, template_frame_landmark):
 
         im1, landmarks1 = template_frame_landmark
+        if viseme_frame_landmark is None:
+            return im1.astype(numpy.uint8)
         im2, landmarks2 = viseme_frame_landmark
         # print(' points to be registered: ', landmarks1[self.ALIGN_POINTS])
 

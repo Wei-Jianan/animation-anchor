@@ -10,6 +10,7 @@ from .htkaligner import PhonemeForcedAligner
 from .parser import parser_factory
 from .generator import VisemeFrameSeqGenerator
 from .synthesizer import VideoSynthesizer
+from .utils import LOG
 
 tmp_dir = os.path.join(os.path.dirname(__file__), 'tmp/')
 
@@ -18,7 +19,7 @@ class Anchor:
     def __init__(self, frame_rate, viseme_kind, viseme_fixed_landmarks: Optional[List[List]] = None,
                  template_fixed_landmarks: Optional[List[List]] = None):
         self.frame_rate = frame_rate
-        self.pheneme_forced_aligner = PhonemeForcedAligner()
+        self.phoneme_forced_aligner = PhonemeForcedAligner()
         self.parser = parser_factory('AnimationParser')()
         self.viseme_frame_generator = VisemeFrameSeqGenerator(frame_rate=self.frame_rate, viseme_kind=viseme_kind,
                                                               fixed_landmarks=viseme_fixed_landmarks)
@@ -42,6 +43,7 @@ class Anchor:
 
     def write_video(self, img_seq, wav_path, debug=False):
         video_file = NamedTemporaryFile(suffix='.mp4')
+        LOG.info('writing video to {}'.format(video_file.name))
         video_with_voice_file = NamedTemporaryFile(suffix='.mp4')
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         img_iter = iter(img_seq)
@@ -74,7 +76,7 @@ class Anchor:
         if wav_path is None:
             wav_file = self._tts(text)
             wav_path = wav_file.name
-        phoneme_durations = self.pheneme_forced_aligner.align(text, wav_path)
+        phoneme_durations = self.phoneme_forced_aligner.align(text, wav_path)
         viseme_durations = list(self.parser.phoneme_durations2viseme_durations(phoneme_durations))
         viseme_frame_seq = self.viseme_frame_generator.generate(viseme_durations)
         video_synthesizer = self.synthesizer_pool[template_name]
