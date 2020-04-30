@@ -18,8 +18,8 @@ def stream_generating(stream_anchor):
     LOG.info('starting get frame from stream_anchor')
     video_frames = []
     audio_frames = []
-    for i, (video_frame, audio_frame, _) in enumerate(stream_anchor):
-        LOG.info('got {} st frame from stream_anchor'.format(i))
+    for i, (video_frame, audio_frame, text_id) in enumerate(stream_anchor):
+        LOG.info('got {} st frame from stream_anchor with text_id {}'.format(i, text_id))
         video_frames.append(video_frame)
         audio_frames.append(audio_frame)
     return video_frames, audio_frames
@@ -52,14 +52,15 @@ if __name__ == '__main__':
                                      viseme_fixed_landmarks=[[0, 0], [60, 36]],
                                      template_fixed_landmarks=[[210, 234], [270, 270]],
                                      default_template_name='aide',
-                                     waiting_frame_num=30
+                                     waiting_frame_num=15,
+                                     async=False
                                      )
 
         stream_anchor.start_stream()
         executor = concurrent.futures.ThreadPoolExecutor()
 
-        frame_async = executor.submit(stream_generating, stream_anchor)
-        time.sleep(3)
+        anchor_frames_async = executor.submit(stream_generating, stream_anchor)
+        # time.sleep(3)
         for i in range(1, 6, 1):
             txt_path = '{:0>2d}.txt'.format(i)
             wav_path = '{:0>2d}.wav'.format(i)
@@ -70,7 +71,7 @@ if __name__ == '__main__':
                                        text_id=i, template_name='aide')
             time.sleep(abs(np.random.normal()) * 3)
         stream_anchor.stop_stream()
-        frames, audio_frames = frame_async.result()
+        frames, audio_frames = anchor_frames_async.result()
         # frames, audio_frames = stream_generating(stream_anchor)
         wave_file = stream_anchor._combine_wav(audio_frames)
         video_file = stream_anchor.write_video(frames, wave_file.name)
@@ -78,4 +79,3 @@ if __name__ == '__main__':
         executor.shutdown(wait=True)
         with open('aide.mp4', 'wb') as f:
             shutil.copyfileobj(video_file, f)
-

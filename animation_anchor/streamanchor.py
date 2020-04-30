@@ -2,12 +2,16 @@ import math
 from scipy.io import wavfile
 import numpy as np
 import threading
-from multiprocessing import Pool
+import multiprocessing as mp
+from concurrent.futures import ProcessPoolExecutor
+
 from queue import Queue
 from enum import Enum, unique
 from collections import namedtuple
-from typing import Sequence, Tuple, Iterable
+from typing import Sequence, Tuple, Iterable, Optional, List
 import tempfile
+from tempfile import NamedTemporaryFile
+import time, cv2, ffmpeg, os
 import subprocess
 
 from .anchor import Anchor
@@ -15,6 +19,12 @@ from .synthesizer import TemplateFrameSeq, VideoSynthesizer
 from .utils import LOG
 
 Sampling_Rate = 16000
+
+from .htkaligner import PhonemeForcedAligner
+from .parser import parser_factory
+from .generator import VisemeFrameSeqGenerator
+from .synthesizer import VideoSynthesizer
+from .utils import LOG
 
 
 @unique
@@ -34,11 +44,12 @@ class AnchorStateException(Exception):
 
 class StreamAnchor(Anchor):
     def __init__(self, default_template_name='aide', num_worker=1,
-                 waiting_frame_num=30, **kwargs):
+                 waiting_frame_num=30, async=False, **kwargs):
         super(StreamAnchor, self).__init__(**kwargs)
         self.task_queue = Queue()
         self.generating_thread = FrameGenerator(self)
-        self.pool = Pool(num_worker)
+        # self.pool = mp.Pool(num_worker)
+        self.pool = ProcessPoolExecutor(num_worker)
         self.waiting_frame_num = waiting_frame_num
         self.template_name = default_template_name
         self.task_mutex = threading.RLock()
@@ -47,6 +58,7 @@ class StreamAnchor(Anchor):
         self.current_state = AnchorState.ready
         self.stream = Queue()
         self.frame_no = 0
+        self.async = async
 
     def __repr__(self):
         # TODO
@@ -60,15 +72,22 @@ class StreamAnchor(Anchor):
 
     def __next__(self):
         with self.task_mutex:
-            if self.task_queue.qsize() == 0 and self.task_state != AnchorState.stop \
+            if self.task_queue.qsize() == 0 \
                     and self.stream.qsize() < self.waiting_frame_num \
                     and self.task_state != AnchorState.stop:
                 self._generate_listening(self.waiting_frame_num)
         frame = self.stream.get()
         if not frame:
+            with self.state_mutex:
+                self.current_state = AnchorState.stop
             raise StopIteration
+        self._pace_control(self.frame_rate)
         video_frame_async, audio_frame, text_id = frame
-        return video_frame_async.get(), audio_frame, text_id
+
+        if self.async:
+            return video_frame_async.result(), audio_frame, text_id
+        video_frame = video_frame_async
+        return video_frame, audio_frame, text_id
 
     def start_stream(self):
         LOG.info('{} starting stream.'.format(self))
@@ -119,6 +138,9 @@ class StreamAnchor(Anchor):
         wave_frame = np.zeros(shape=(sample_per_frame,), dtype=np.int16)
         return wave_frame
 
+    def _pace_control(self, frame_rate):
+        time.sleep(min(0, (1 / frame_rate) - 0.01))
+
     def get_state(self):
         with self.state_mutex:
             return self.current_state
@@ -160,31 +182,43 @@ class StreamAnchor(Anchor):
         called in another thread.
         :return: None
         '''
-        while True:
-            anchor_task = self.task_queue.get()
-            if anchor_task is None:
-                LOG.info('generating thread stop')
-                self.stream.put(None)
-                with self.state_mutex:
-                    self.current_state = AnchorState.stop
-                break
+        # while True:
+        anchor_task = self.task_queue.get()
+        if anchor_task is None:
+            LOG.info('generating thread stop')
+            self.stream.put(None)
+            return
+            # with self.state_mutex:
+            #     self.current_state = AnchorState.stop
+            # break
 
-            viseme_frame_seq = anchor_task.viseme_frame_seq
-            wav_frame_seq = anchor_task.wav_frame_seq
-            anchor_state = anchor_task.anchor_state
-            text_id = anchor_task.text_id
-            # TODO template_name
-            for i, (viseme_frame, wav_frame) in enumerate(zip(viseme_frame_seq, wav_frame_seq)):
-                frame_async = self.pool.apply_async(self.template_frame_seq.synthesize,
-                                                    args=(viseme_frame, self.template_frame_seq[self.frame_no + i])
-                                                    )
+        viseme_frame_seq = anchor_task.viseme_frame_seq
+        wav_frame_seq = anchor_task.wav_frame_seq
+        anchor_state = anchor_task.anchor_state
+        text_id = anchor_task.text_id
+        # TODO template_name
+        for i, (viseme_frame, wav_frame) in enumerate(zip(viseme_frame_seq, wav_frame_seq)):
+            # TODO async muti processing
+            # frame_async: mp.pool.AsyncResult = self.pool.apply_async(self.template_frame_seq.synthesize,
+            #                                                          args=(viseme_frame,
+            #                                                                self.template_frame_seq[self.frame_no + i])
+            #                                                          )
+            if self.async:
+                frame_async = self.pool.submit(self.template_frame_seq.synthesize,
+                                               viseme_frame,
+                                               self.template_frame_seq[self.frame_no + i]
+                                               )
                 self.stream.put((frame_async, wav_frame, text_id))
-            self.frame_no += 1
-            with self.state_mutex:
-                self.current_state = anchor_state
+            # TODO sync one processing
+            else:
+                frame = self.template_frame_seq.synthesize(viseme_frame, self.template_frame_seq[self.frame_no + i])
+                self.stream.put((frame, wav_frame, text_id))
+        self.frame_no += 1
+        with self.state_mutex:
+            self.current_state = anchor_state
 
-            LOG.info(
-                'generating anchor task from stream_anchor text_id: {}, current_state {}'.format(text_id, anchor_state))
+        LOG.info(
+            'generating anchor task from stream_anchor text_id: {}, current_state {}'.format(text_id, anchor_state))
 
 
 class FrameGenerator(threading.Thread):
@@ -195,3 +229,5 @@ class FrameGenerator(threading.Thread):
     def run(self):
         while True:
             self.stream_anchor.generate()
+            if self.stream_anchor.get_state() == AnchorState.stop:
+                break
