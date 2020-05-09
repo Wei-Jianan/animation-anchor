@@ -18,7 +18,6 @@ from .anchor import Anchor
 from .synthesizer import TemplateFrameSeq, VideoSynthesizer
 from .utils import LOG
 
-Sampling_Rate = 16000
 
 from .htkaligner import PhonemeForcedAligner
 from .parser import parser_factory
@@ -44,13 +43,14 @@ class AnchorStateException(Exception):
 
 class StreamAnchor(Anchor):
     def __init__(self, default_template_name='aide', num_worker=1,
-                 waiting_frame_num=30, async=False, **kwargs):
+                 waiting_frame_num=30, sampling_rate=16000, async=False, debug=False, **kwargs):
         super(StreamAnchor, self).__init__(**kwargs)
         self.task_queue = Queue()
         self.generating_thread = FrameGenerator(self)
         # self.pool = mp.Pool(num_worker)
         self.pool = ProcessPoolExecutor(num_worker)
         self.waiting_frame_num = waiting_frame_num
+        self.sampling_rate = sampling_rate
         self.template_name = default_template_name
         self.task_mutex = threading.RLock()
         self.task_state = AnchorState.ready
@@ -59,6 +59,7 @@ class StreamAnchor(Anchor):
         self.stream = Queue()
         self.frame_no = 0
         self.async = async
+        self.debug = debug
 
     def __repr__(self):
         # TODO
@@ -66,6 +67,8 @@ class StreamAnchor(Anchor):
 
     def __iter__(self):
         # with self.task_mutex:
+        #TODO
+        time.sleep(1)
         if not self.stream.qsize():
             raise AnchorStateException(' Stream Anchor should be start first before iter')
         return self
@@ -85,8 +88,15 @@ class StreamAnchor(Anchor):
         video_frame_async, audio_frame, text_id = frame
 
         if self.async:
-            return video_frame_async.result(), audio_frame, text_id
-        video_frame = video_frame_async
+            video_frame = video_frame_async.result()
+        else:
+            video_frame = video_frame_async
+        if self.debug:
+            # video_frame = cv2.putText(video_frame, text=str(text_id), )
+            cv2.putText(video_frame, str(text_id), (50, 150), cv2.FONT_HERSHEY_COMPLEX, 6, (0, 0, 255), 25)
+        LOG.info(
+            'iterate a frame pair: text_id: {}.'.format(text_id))
+
         return video_frame, audio_frame, text_id
 
     def start_stream(self):
@@ -122,7 +132,7 @@ class StreamAnchor(Anchor):
                 yield wave_frame
 
         resampled_wav_file = tempfile.NamedTemporaryFile(suffix='.wav')
-        subprocess.check_call(['sox', wav_path, '-r', str(Sampling_Rate), resampled_wav_file.name])
+        subprocess.check_call(['sox', wav_path, '-r', str(self.sampling_rate), resampled_wav_file.name])
         sampling_rate, wav_data = wavfile.read(resampled_wav_file.name)
         sample_per_frame = sampling_rate // self.frame_rate
         return _generate(wav_data, sample_per_frame)
@@ -131,7 +141,7 @@ class StreamAnchor(Anchor):
         wave_file = tempfile.NamedTemporaryFile(suffix='.wav')
         LOG.info('{} combine the audio_frames to {}'.format(self, wave_file.name))
         wave_data = np.concatenate(list(wave_frames), axis=0)
-        wavfile.write(wave_file.name, rate=Sampling_Rate, data=wave_data)
+        wavfile.write(wave_file.name, rate=self.sampling_rate, data=wave_data)
         return wave_file
 
     def _blank_wave_frame(self, sample_per_frame):
@@ -139,7 +149,7 @@ class StreamAnchor(Anchor):
         return wave_frame
 
     def _pace_control(self, frame_rate):
-        time.sleep(min(0, (1 / frame_rate) - 0.01))
+        time.sleep(max(0, (1 / frame_rate) - 0.015))
 
     def get_state(self):
         with self.state_mutex:
@@ -161,7 +171,7 @@ class StreamAnchor(Anchor):
         with self.task_mutex:
             self.task_state = AnchorState.listening
             self.task_queue.put(AnchorTask(viseme_frame_seq=[None for i in range(waiting_frame_num)],
-                                           wav_frame_seq=[self._blank_wave_frame(Sampling_Rate // self.frame_rate)
+                                           wav_frame_seq=[self._blank_wave_frame(self.sampling_rate // self.frame_rate)
                                                           for i in range(waiting_frame_num)],
                                            anchor_state=AnchorState.listening,
                                            text_id=None,
@@ -208,6 +218,7 @@ class StreamAnchor(Anchor):
                                                viseme_frame,
                                                self.template_frame_seq[self.frame_no + i]
                                                )
+
                 self.stream.put((frame_async, wav_frame, text_id))
             # TODO sync one processing
             else:

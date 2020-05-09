@@ -1,6 +1,9 @@
 import sys
 from pathlib import Path
 import numpy as np
+import uuid
+from multiprocessing import Process
+import subprocess
 from matplotlib import pyplot as plt
 
 sys.path.append(str(Path(__file__).parent.joinpath('..').resolve()))
@@ -8,10 +11,11 @@ sys.path.append(str(Path(__file__).parent.joinpath('..').resolve()))
 import shutil
 import os, time
 import concurrent.futures
-from animation_anchor import Anchor, StreamAnchor, AnchorState
+from animation_anchor import Anchor, StreamAnchor, AnchorState, AnchorLive
 from animation_anchor.utils import LOG
 
 STREAM_MODE = True
+LIVE_MODE = True
 
 
 def stream_generating(stream_anchor):
@@ -45,6 +49,46 @@ if __name__ == '__main__':
             with open(video_path, 'wb') as f:
                 shutil.copyfileobj(video_file, f)
             video_file.close()
+    elif LIVE_MODE and STREAM_MODE:
+        init_args = {
+            "streamID": "abc",
+            "speack_over_callback": "speack_over_callback",
+            "videoInfo": {
+                "resolution": {"width": 640, "height": 480},
+                "framerate": 15,
+            },
+
+            "audioInfo": {
+                "sampleRate": 16000,
+                "channelNum": 1
+            },
+        }
+
+        anchor_live = AnchorLive(init_args["streamID"], init_args["videoInfo"], init_args["audioInfo"],
+                                 # speack_over_callback=init_args["speack_over_callback"],
+                                 viseme_kind='aide',
+                                 viseme_fixed_landmarks=[[0, 0], [60, 36]],
+                                 template_fixed_landmarks=[[210, 234], [270, 270]],
+                                 default_template_name='aide',
+                                 waiting_frame_num=10,
+                                 speack_over_callback=lambda text, text_id: LOG.warning('!!!!!!!!' + text + str(text_id))
+                                 )
+        anchor_live.start()
+        # subprocess.Popen(['ffplay', '-i', str(anchor_live.rtsp)])
+        print(anchor_live.rtsp)
+        for i in range(1, 6, 1):
+            txt_path = '{:0>2d}.txt'.format(i)
+            wav_path = '{:0>2d}.wav'.format(i)
+            with open(txt_path, 'r', encoding='utf-8') as f:
+                text = f.read()
+            anchor_live.put_text(text, wav_path=wav_path, text_id=str(uuid.uuid4()))
+            listening_time = abs(np.random.normal()) * 15
+            # listening_time = 20
+            LOG.info('listening customer for {} seconds'.format(listening_time))
+            time.sleep(abs(listening_time))
+        # anchor_live.stop()
+
+
     else:
         stream_anchor = StreamAnchor(frame_rate=25,
                                      num_worker=4,
@@ -64,7 +108,6 @@ if __name__ == '__main__':
         for i in range(1, 6, 1):
             txt_path = '{:0>2d}.txt'.format(i)
             wav_path = '{:0>2d}.wav'.format(i)
-            video_path = 'aide/{:0>2d}.mp4'.format(i)
             with open(txt_path, 'r', encoding='utf-8') as f:
                 txt = f.read()
             stream_anchor.put_text_wav(text=txt, wav_path=wav_path,

@@ -7,11 +7,13 @@ from pathlib import Path
 from typing import Optional, List
 
 from ..utils import read_landmarks, read_frames
+from ..utils import LOG
 
 
 class TemplateFrameSeq:
     template_root = Path(__file__).parent.joinpath('../assets/template').resolve()
     ALIGN_POINTS = [0, 1]
+    COLOUR_CORRECT_BLUR_FRAC = 1
 
     # Points from the second image to overlay on the first. The convex hull of each
     # element will be overlaid.
@@ -64,7 +66,7 @@ class TemplateFrameSeq:
         # final_mask = final_mask.transpose((2, 0, 1))[0]
 
         # return warped_im2
-        # warped_corrected_im2 = self.correct_colours(im1, warped_im2, landmarks1)
+        self.correct_colours(im1, warped_im2, landmarks1)
         warped_corrected_im2 = warped_im2
         # output_im = im1 * (1.0 - combined_mask) + warped_corrected_im2 * combined_mask
         output_im = im1 * (1.0 - final_mask) + warped_corrected_im2 * final_mask
@@ -152,13 +154,14 @@ class TemplateFrameSeq:
         return output_im
 
     def correct_colours(self, im1, im2, landmarks1):
-        blur_amount = self.COLOUR_CORRECT_BLUR_FRAC * numpy.linalg.norm(
-            numpy.mean(landmarks1[self.LEFT_EYE_POINTS], axis=0) -
-            numpy.mean(landmarks1[self.RIGHT_EYE_POINTS], axis=0))
+        im1 = im1.copy()
+        im2 = im2.copy()
+        blur_amount = self.COLOUR_CORRECT_BLUR_FRAC * 1
         blur_amount = int(blur_amount)
         if blur_amount % 2 == 0:
             blur_amount += 1
         im1_blur = cv2.GaussianBlur(im1, (blur_amount, blur_amount), 0)
+        im1_blur = cv2.GaussianBlur(im1_blur, (blur_amount, blur_amount), 0)
         im2_blur = cv2.GaussianBlur(im2, (blur_amount, blur_amount), 0)
 
         # Avoid divide-by-zero errors.
