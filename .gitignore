@@ -139,7 +139,6 @@ dmypy.json
 cython_debug/
 .idea/
 *.agg-info/
-dist/
 */assets/
 *.mp4
 .vscode
