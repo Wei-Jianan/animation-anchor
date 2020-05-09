@@ -2,7 +2,7 @@ import time
 import math
 import numpy as np
 from fractions import Fraction
-from threading import Thread
+from threading import Thread, Event
 from multiprocessing import Process, Value, Queue, Manager
 from ctypes import c_char_p
 
@@ -16,11 +16,11 @@ from .utils import LOG
 class AnchorLive:
 
     def __init__(self, streamId, videoInfo, audioInfo,
+                 rtsp_url, rtsp_option,
                  viseme_fixed_landmarks, template_fixed_landmarks,
                  default_template_name='aide', viseme_kind='aide',
-                 rtsp_url="rtsp://localhost:8554", rtsp_option='tcp',
                  num_worker=None, waiting_frame_num=15,
-                 async=False, debug=False, speack_over_callback=lambda: None):
+                 async_mode=False, debug=False, speack_over_callback=lambda: None):
         """
         :param streamId:
         :videoInfo
@@ -82,7 +82,7 @@ class AnchorLive:
                                     default_template_name=default_template_name,
                                     viseme_kind=viseme_kind,
                                     waiting_frame_num=waiting_frame_num,
-                                    async=async,
+                                    async_mode=async_mode,
                                     debug=debug,
                                     )
 
@@ -116,6 +116,7 @@ class AnchorLive:
         self.waiting_value = "waiting"
         self.speaking_value = "speaking"
         self.text_map ={}
+        self.event = Event()
         self.manager = Manager()
         self.status = self.manager.Value(c_char_p, self.waiting_value)
         self.seqNo = self.manager.Value(c_char_p, None)
@@ -177,6 +178,9 @@ class AnchorLive:
         # 初始化 嘉楠的 主播类
         # start and get frame
         self.avitems.start_stream()
+        time.sleep(10)
+        self.event.set()
+
         tmp_seqNo = None
 
         for vframe_ndarray, aframe_ndarray, seqNo, in self.avitems:
@@ -207,6 +211,7 @@ class AnchorLive:
 
         self.p = Thread(target=self.worker)
         self.p.start()
+        self.event.wait()
         return True
 
     def stop(self):

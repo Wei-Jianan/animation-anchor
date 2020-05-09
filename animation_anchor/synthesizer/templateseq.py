@@ -48,9 +48,11 @@ class TemplateFrameSeq:
     def synthesize(self, viseme_frame_landmark, template_frame_landmark):
 
         im1, landmarks1 = template_frame_landmark
+        im1 = im1.astype(numpy.uint8)
         if viseme_frame_landmark is None:
             return im1.astype(numpy.uint8)
         im2, landmarks2 = viseme_frame_landmark
+        im2 = im2.astype(numpy.uint8)
         # print(' points to be registered: ', landmarks1[self.ALIGN_POINTS])
 
         M = self.transformation_from_points(landmarks1[self.ALIGN_POINTS],
@@ -131,10 +133,12 @@ class TemplateFrameSeq:
 
     def get_face_mask(self, im):
         im = cv2.cvtColor(im, cv2.COLOR_RGB2GRAY)
+        idtype= im.dtype
+
         im = numpy.where(im == 0, 0, 1)
 
 
-        mask = numpy.array([im, im, im]).transpose((1, 2, 0))
+        mask = numpy.array([im, im, im]).transpose((1, 2, 0)).astype(idtype)
 
         # im = (cv2.GaussianBlur(im, (self.FEATHER_AMOUNT, self.FEATHER_AMOUNT), 0) > 0) * 1.0
         # im = cv2.GaussianBlur(im, (self.FEATHER_AMOUNT, self.FEATHER_AMOUNT), 0)

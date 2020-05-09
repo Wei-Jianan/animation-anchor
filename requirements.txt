@@ -3,4 +3,6 @@ opencv-python
 ffmpeg-python
 jieba
 pypinyin
-dlib
+scipy
+av
+# dlib

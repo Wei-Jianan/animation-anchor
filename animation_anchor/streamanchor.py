@@ -43,7 +43,7 @@ class AnchorStateException(Exception):
 
 class StreamAnchor(Anchor):
     def __init__(self, default_template_name='aide', num_worker=1,
-                 waiting_frame_num=30, sampling_rate=16000, async=False, debug=False, **kwargs):
+                 waiting_frame_num=30, sampling_rate=16000, async_mode=False, debug=False, **kwargs):
         super(StreamAnchor, self).__init__(**kwargs)
         self.task_queue = Queue()
         self.generating_thread = FrameGenerator(self)
@@ -58,7 +58,7 @@ class StreamAnchor(Anchor):
         self.current_state = AnchorState.ready
         self.stream = Queue()
         self.frame_no = 0
-        self.async = async
+        self.async_mode = async_mode
         self.debug = debug
 
     def __repr__(self):
@@ -87,7 +87,7 @@ class StreamAnchor(Anchor):
         self._pace_control(self.frame_rate)
         video_frame_async, audio_frame, text_id = frame
 
-        if self.async:
+        if self.async_mode:
             video_frame = video_frame_async.result()
         else:
             video_frame = video_frame_async
@@ -213,7 +213,7 @@ class StreamAnchor(Anchor):
             #                                                          args=(viseme_frame,
             #                                                                self.template_frame_seq[self.frame_no + i])
             #                                                          )
-            if self.async:
+            if self.async_mode:
                 frame_async = self.pool.submit(self.template_frame_seq.synthesize,
                                                viseme_frame,
                                                self.template_frame_seq[self.frame_no + i]

@@ -7,7 +7,7 @@ if __name__ == '__main__':
         version='1.0',
         packages=find_packages(),
         author='jianan wei, suntianwei',
-        install_requires=['numpy', 'opemcv-python', 'ffmpeg-python', 'jieba', 'pypinyin'],
+        install_requires=['numpy', 'opencv-python', 'ffmpeg-python', 'jieba', 'pypinyin', 'scipy', 'av'],
         package_data={
             'animation_anchor': [
                 'assets/mapping_table/*',
@@ -15,6 +15,9 @@ if __name__ == '__main__':
                 'assets/viseme/aide/*/*',
                 'assets/template/kuailepingan/*',
                 'assets/viseme/kuailepingan/*/*',
+                'htkaligner/model/*',
+                'htkaligner/model/*/*',
+
             ]
         }
 

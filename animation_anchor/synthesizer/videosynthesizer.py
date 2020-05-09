@@ -3,7 +3,6 @@ from typing import Optional, List
 from .templateseq import TemplateFrameSeq
 from ..generator import VisemeFrameSeq
 
-import skvideo.io
 from typing import Iterable
 import numpy as np
 
