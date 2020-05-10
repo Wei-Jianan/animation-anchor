@@ -178,7 +178,6 @@ class AnchorLive:
         # 初始化 嘉楠的 主播类
         # start and get frame
         self.avitems.start_stream()
-        time.sleep(10)
         self.event.set()
 
         tmp_seqNo = None

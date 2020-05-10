@@ -4,7 +4,6 @@ import numpy as np
 import uuid
 from multiprocessing import Process
 import subprocess
-from matplotlib import pyplot as plt
 
 sys.path.append(str(Path(__file__).parent.joinpath('..').resolve()))
 
@@ -66,12 +65,14 @@ if __name__ == '__main__':
 
         anchor_live = AnchorLive(init_args["streamID"], init_args["videoInfo"], init_args["audioInfo"],
                                  # speack_over_callback=init_args["speack_over_callback"],
+                                 rtsp_url="rtsp://localhost:8554", rtsp_option='tcp',
                                  viseme_kind='aide',
                                  viseme_fixed_landmarks=[[0, 0], [60, 36]],
                                  template_fixed_landmarks=[[210, 234], [270, 270]],
                                  default_template_name='aide',
                                  waiting_frame_num=10,
-                                 speack_over_callback=lambda text, text_id: LOG.warning('!!!!!!!!' + text + str(text_id))
+                                 speack_over_callback=lambda text, text_id: LOG.warning(
+                                     '!!!!!!!!' + text + str(text_id))
                                  )
         anchor_live.start()
         # subprocess.Popen(['ffplay', '-i', str(anchor_live.rtsp)])
@@ -97,7 +98,7 @@ if __name__ == '__main__':
                                      template_fixed_landmarks=[[210, 234], [270, 270]],
                                      default_template_name='aide',
                                      waiting_frame_num=15,
-                                     async=False
+                                     async_mode=False
                                      )
 
         stream_anchor.start_stream()

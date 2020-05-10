@@ -143,3 +143,4 @@ cython_debug/
 *.mp4
 .vscode
 *.zip
+*.tar
