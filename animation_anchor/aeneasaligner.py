@@ -51,7 +51,7 @@ class PhonemeForcedAligner:
         return phoneme_durations
 
     def _write_txt(self, text):
-        f = tempfile.NamedTemporaryFile(mode='w', suffix='.txt')
+        f = tempfile.NamedTemporaryFile(mode='w',encoding='utf-8',  suffix='.txt')
         for char in text:
             if char >= u'\u4e00' and char <= u'\u9fa5':
                 f.write(char + '\n')

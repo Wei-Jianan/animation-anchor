@@ -19,6 +19,15 @@ class TestPhonemeForcedAligner(unittest.TestCase):
         self.assertIsInstance(phoneme_durations, Iterable)
         print('the forced phonemes is: \n', phoneme_durations)
 
+class TestAeneasAligner(unittest.TestCase):
 
+    def setUp(self):
+        print('setting up')
+        from animation_anchor.aeneasaligner import PhonemeForcedAligner
+        self.aligner = PhonemeForcedAligner()
+    def test_align(self):
+        phoneme_durations = self.aligner.align('春走在路上，看看世界无限宽广，繁花似锦，人来人往，那无人能解的忧伤。',
+                                               Path(__file__).parent / '11.mp3')
+        print(phoneme_durations)
 if __name__ == '__main__':
     unittest.main()
