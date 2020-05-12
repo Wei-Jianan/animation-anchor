@@ -20,7 +20,7 @@ class AnchorLive:
                  viseme_fixed_landmarks, template_fixed_landmarks,
                  default_template_name='aide', viseme_kind='aide',
                  num_worker=None, waiting_frame_num=15,
-                 async_mode=False, debug=False, speack_over_callback=lambda: None):
+                 async_mode=False, debug=False, speack_over_callback=lambda text, textid, frame_no: None):
         """
         :param streamId:
         :videoInfo
@@ -109,17 +109,16 @@ class AnchorLive:
         self.audio_fps = 0
         self.audio_time = 0
         self.video_time = 0
-        self.stream_anchor = None
 
     def init_process_share(self):
         # self.status = Value('i', 0)
         self.waiting_value = "waiting"
         self.speaking_value = "speaking"
-        self.text_map ={}
+        self.text_map = {}
         self.event = Event()
-        self.manager = Manager()
-        self.status = self.manager.Value(c_char_p, self.waiting_value)
-        self.seqNo = self.manager.Value(c_char_p, None)
+        # self.manager = Manager()
+        # self.status = self.manager.Value(c_char_p, self.waiting_value)
+        # self.seqNo = self.manager.Value(c_char_p, None)
         # self.frame_index = Value('i', 0)
 
     def init_container(self, rtsp_url, rtsp_option):
@@ -187,22 +186,13 @@ class AnchorLive:
             if seqNo != tmp_seqNo:
                 # # 改变状态
                 print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-                # if self.status == self.waiting_value:
-                #     self.status = self.speaking_value
-                # else:
-                #     self.status = self.waiting_value
                 if seqNo == None:  # speaking -> waiting
                     print("----> 0")
-                    self.status.value = self.waiting_value
-                    # do callback
-                    # self.video_fps
+                    Thread(target=lambda: self.speack_over_callback(self.text_map[tmp_seqNo], str(seqNo),
+                                                                    str(self.avitems.frame_no))).start()
                 else:  # waiting -> speaking
                     print("----> 1")
-                    self.status.value = self.speaking_value
-                    Thread(target=lambda: self.speack_over_callback(self.text_map[seqNo], str(seqNo))).start()
                 tmp_seqNo = seqNo
-                self.seqNo.value = seqNo
-
             self.encode_audio_ndarray(aframe_ndarray)
             self.encode_video_ndarray(vframe_ndarray)
 
@@ -225,43 +215,8 @@ class AnchorLive:
         # self.queue.put(text)
         return True
 
-    # def get_status(self):
-    #     print("Status: ",self.status.value)
-    #     if self.status.value == 0:
-    #         return "waiting"
-    #     elif self.status.value == 1:
-    #         return "speaking"
-    #     else:
-    #         return "error"
-
-    def do_callback(self, streamID, text, seqNo, frameNo):
-        pass
+    def get_status(self):
+        print('h')
+        return str(self.avitems.get_state().value)
 
 
-if __name__ == "__main__":
-    init_args = {
-        "streamID": "abc",
-        "speack_over_callback": "speack_over_callback",
-        "videoInfo": {
-            "resolution": {"width": 640, "height": 480},
-            "framerate": 15,
-        },
-
-        "audioInfo": {
-            "sampleRate": 8000,
-            "channelNum": 1
-        },
-    }
-
-    live = AnchorLive(init_args["streamID"], init_args["videoInfo"], init_args["audioInfo"],
-                      init_args["speack_over_callback"])
-    live.start()
-    print(live.rtsp)
-    p = {}
-    p["abc"] = live
-
-    while True:
-        input("回车插入新视频")
-        print(p["abc"].status.value)
-        live.queue.put(
-            ("seqNo", ("/root/flask-anchor/app/templates/out20s.wav", "/root/flask-anchor/app/templates/out20s.mp4")))

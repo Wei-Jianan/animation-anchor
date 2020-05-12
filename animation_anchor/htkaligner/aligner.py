@@ -1,5 +1,6 @@
 import shutil, subprocess, os, sys
 import re
+import functools, time
 import wave
 import hashlib
 import jieba
@@ -9,8 +10,20 @@ from tempfile import NamedTemporaryFile, TemporaryDirectory
 from collections import namedtuple
 from typing import Sequence, Iterable
 
+
 IS_DELETE = True
 
+def timer(func):
+    # from ..utils import LOG
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        # LOG.info('method {} took {} seconds'.format(func.__name__, end - start))
+        print('method {} took {} seconds'.format(func.__name__, end - start))
+        return result
+    return wrapper
 
 def get_file_md5(file_path):
     with open(file_path, 'rb') as f:
@@ -77,6 +90,7 @@ class PhonemeForcedAligner():
     def extend_puncs(self, puncs_set):
         self.puncs_set.extend(puncs_set)
 
+    # @timer
     def align(self, text: str, wav_path: Path) -> Iterable[PhonemeDuration]:
         temp_wav_file = self._write_audio(wav_path)
         wav_path = temp_wav_file.name
@@ -90,6 +104,7 @@ class PhonemeForcedAligner():
         # print('wav file shashing: ', get_file_md5(temp_wav_file.name), temp_wav_file.name)
         with TemporaryDirectory() as temp_dir:
             plp_path = self._hcopy(temp_wav_file, temp_dir)
+            print(plp_path)
             # print('plp file shashing: ', get_file_md5(plp_path), plp_path)
             mlf_path = self.generate_mlf(text, temp_dir)
             # print('mlf file shashing: ', get_file_md5(mlf_path), mlf_path)
@@ -269,5 +284,6 @@ class PhonemeForcedAligner():
 
 if __name__ == '__main__':
     aligner = PhonemeForcedAligner()
-    phoneme_durations = aligner.align('春走在路上，看看世界无限宽绪', '/Users/jiananwei/Desktop/models/11.mp3')
+    phoneme_durations = list(aligner.align('春走在路上，看看世界无限宽绪', '/Users/jiananwei/Desktop/主播/搜狗/11.mp3'))
+    phoneme_durations = list(aligner.align('春走在路上，看看世界无限宽绪', '/Users/jiananwei/Desktop/主播/搜狗/11.wav'))
     print(phoneme_durations)

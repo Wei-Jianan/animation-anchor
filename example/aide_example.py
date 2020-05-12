@@ -71,8 +71,8 @@ if __name__ == '__main__':
                                  template_fixed_landmarks=[[210, 234], [270, 270]],
                                  default_template_name='aide',
                                  waiting_frame_num=10,
-                                 speack_over_callback=lambda text, text_id: LOG.warning(
-                                     '!!!!!!!!' + text + str(text_id))
+                                 speack_over_callback=lambda text, text_id, frame_no: LOG.warning(
+                                     '!!!!!!!!' + text + str(text_id) + ' frame_no: ' + str(frame_no))
                                  )
         anchor_live.start()
         # subprocess.Popen(['ffplay', '-i', str(anchor_live.rtsp)])
@@ -80,13 +80,17 @@ if __name__ == '__main__':
         for i in range(1, 6, 1):
             txt_path = '{:0>2d}.txt'.format(i)
             wav_path = '{:0>2d}.wav'.format(i)
+            print("----------GET_STATE-------------", anchor_live.get_status())
             with open(txt_path, 'r', encoding='utf-8') as f:
                 text = f.read()
             anchor_live.put_text(text, wav_path=wav_path, text_id=str(uuid.uuid4()))
+
+            print("----------GET_STATE-------------", anchor_live.get_status())
             listening_time = abs(np.random.normal()) * 15
             # listening_time = 20
             LOG.info('listening customer for {} seconds'.format(listening_time))
             time.sleep(abs(listening_time))
+            print("----------GET_STATE-------------", anchor_live.get_status())
         # anchor_live.stop()
 
 

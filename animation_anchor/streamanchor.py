@@ -18,7 +18,6 @@ from .anchor import Anchor
 from .synthesizer import TemplateFrameSeq, VideoSynthesizer
 from .utils import LOG
 
-
 from .htkaligner import PhonemeForcedAligner
 from .parser import parser_factory
 from .generator import VisemeFrameSeqGenerator
@@ -30,7 +29,7 @@ from .utils import LOG
 class AnchorState(Enum):
     ready = 'not running'
     stop = 'stoped'
-    listening = 'listening'
+    listening = 'waiting'
     speaking = 'speaking'
 
 
@@ -67,7 +66,7 @@ class StreamAnchor(Anchor):
 
     def __iter__(self):
         # with self.task_mutex:
-        #TODO
+        # TODO
         time.sleep(1)
         if not self.stream.qsize():
             raise AnchorStateException(' Stream Anchor should be start first before iter')
@@ -209,10 +208,6 @@ class StreamAnchor(Anchor):
         # TODO template_name
         for i, (viseme_frame, wav_frame) in enumerate(zip(viseme_frame_seq, wav_frame_seq)):
             # TODO async muti processing
-            # frame_async: mp.pool.AsyncResult = self.pool.apply_async(self.template_frame_seq.synthesize,
-            #                                                          args=(viseme_frame,
-            #                                                                self.template_frame_seq[self.frame_no + i])
-            #                                                          )
             if self.async_mode:
                 frame_async = self.pool.submit(self.template_frame_seq.synthesize,
                                                viseme_frame,
