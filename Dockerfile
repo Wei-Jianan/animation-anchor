@@ -30,7 +30,7 @@ RUN wget https://mirrors.tuna.tsinghua.edu.cn/anaconda/miniconda/Miniconda3-py37
 #
 RUN pip install numpy  opencv-python av  ffmpeg-python jieba pypinyin scipy av -i https://pypi.tuna.tsinghua.edu.cn/simple  && rm -rf ~/.cache/pip
 RUN apt-get -y install build-essential gcc-multilib libx11-dev && apt clean
-RUN pip install flask requests flask-cors redis -i https://pypi.tuna.tsinghua.edu.cn/simple && rm -rf ~/.cache/pip
+RUN pip install flask requests flask-cors redis joblib -i https://pypi.tuna.tsinghua.edu.cn/simple && rm -rf ~/.cache/pip
 
 COPY 3rdparty/htk /opt/htk
 RUN cd /opt/htk && ./configure && make -j4 || make install || echo "install success"
