@@ -13,6 +13,7 @@ import tempfile
 from tempfile import NamedTemporaryFile
 import time, cv2, ffmpeg, os
 import subprocess
+import datetime
 
 from .anchor import Anchor
 from .synthesizer import TemplateFrameSeq, VideoSynthesizer
@@ -57,6 +58,7 @@ class StreamAnchor(Anchor):
         self.current_state = AnchorState.ready
         self.stream = Queue()
         self.frame_no = 0
+        self.gotten_no = 0
         self.async_mode = async_mode
         self.debug = debug
 
@@ -67,8 +69,8 @@ class StreamAnchor(Anchor):
     def __iter__(self):
         # with self.task_mutex:
         # TODO
-        time.sleep(1)
-        if not self.stream.qsize():
+        # time.sleep(0.2)
+        if not self.stream.qsize() and self.task_state != AnchorState.speaking and self.task_state != AnchorState.listening:
             raise AnchorStateException(' Stream Anchor should be start first before iter')
         return self
 
@@ -90,9 +92,17 @@ class StreamAnchor(Anchor):
             video_frame = video_frame_async.result()
         else:
             video_frame = video_frame_async
+
+        video_frame = video_frame.copy()
         if self.debug:
             # video_frame = cv2.putText(video_frame, text=str(text_id), )
-            cv2.putText(video_frame, str(text_id), (50, 150), cv2.FONT_HERSHEY_COMPLEX, 6, (0, 0, 255), 25)
+            # cv2.putText(video_frame, str(text_id), (50, 150), cv2.FONT_HERSHEY_COMPLEX, 6, (0, 0, 255), 25)
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            datestr = str(datetime.datetime.now())
+            cv2.putText(video_frame, datestr, (10, 100), font, 0.5, (0, 255, 255), 2, cv2.LINE_AA)
+            # cv2.putText(video_frame, datestr, (10, 100), font, 0.5, (0, 255, 255), 2, cv2.LINE_AA)
+            LOG.warning(type(video_frame))
+            # video_frame = np.array(video_frame)
         LOG.info(
             'iterate a frame pair: text_id: {}.'.format(text_id))
 
@@ -148,7 +158,10 @@ class StreamAnchor(Anchor):
         return wave_frame
 
     def _pace_control(self, frame_rate):
+        # while (time.time() - self.start_time) < self.gotten_no / self.frame_rate:
+        #     time.sleep(max(0, (1 / frame_rate) - 0.015))
         time.sleep(max(0, (1 / frame_rate) - 0.015))
+        self.gotten_no += 1
 
     def get_state(self):
         with self.state_mutex:
@@ -159,6 +172,7 @@ class StreamAnchor(Anchor):
         with self.state_mutex:
             self.template_frame_seq = self._get_template_frame_seq(self.template_name)
         self.generating_thread.start()
+        self.start_time = time.time()
 
     def _get_template_frame_seq(self, template_name):
         self.synthesizer_pool.setdefault(template_name, VideoSynthesizer(template_name, self.template_fixed_landmarks))

@@ -96,7 +96,7 @@ class AnchorLive:
         if self.audioInfo.get("channelNum") != 1:
             LOG.warning('not support audio channel more then 1')
         self.channelNum = 1  # 音频声道数
-        self.sampleRate = self.audioInfo.get("sampleRate", 16000)  # 音频采样率
+        self.sampleRate = self.audioInfo.get("sampleRate", 8000)  # 音频采样率
         self.layout_set = {1: "mono", 2: "stereo", }
         self.layout = self.layout_set[self.channelNum]
         # time_base
@@ -149,7 +149,7 @@ class AnchorLive:
         # self.video_fps += 1
         # self.video_time += self.video_time_base
         vframe = av.VideoFrame.from_ndarray(vframe_ndarray, format='rgb24')
-        # LOG.info(f'v {vframe}')
+        LOG.info(f'v {vframe}')
         for packet in self.video_stream.encode(vframe):
             packet.pts = self.video_fps
             self.video_fps += 1
@@ -216,7 +216,6 @@ class AnchorLive:
         return True
 
     def get_status(self):
-        print('h')
         return str(self.avitems.get_state().value)
 
 
