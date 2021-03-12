@@ -54,12 +54,21 @@ class TestVisemeFrameSeq(unittest.TestCase):
             raise
 
 class TestViseme(unittest.TestCase):
-    def test_getitem(self):
-        viseme = Viseme('aide/C1', begin=0.1, end=3.0)
-        self.assertEqual(len(viseme), 8)
+    def test_getitem1(self):
+        viseme = Viseme('yishenzhen/C1', begin=0.1, end=3.0, fixed_landmarks=[[0, 0], [180, 100]])
+        # self.assertEqual(len(viseme), 8)
         fig = plt.figure()
-        plt.imshow(viseme[0][0])
-        plt.show()
+        pixel = viseme[0][0][0][0]
+        for i in range(len(viseme)):
+            plt.imshow(viseme[i][0])
+            plt.show()
 
+    def test_getitem2(self):
+        viseme = Viseme('kuailepingan/C1', begin=0.1, end=3.0, fixed_landmarks=[[0, 0], [180, 100]])
+        # self.assertEqual(len(viseme), 8)
+        fig = plt.figure()
+        for i in range(len(viseme)):
+            plt.imshow(viseme[i][0])
+            plt.show()
 if __name__ == '__main__':
     unittest.main()

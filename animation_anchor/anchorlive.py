@@ -129,7 +129,7 @@ class AnchorLive:
         # self.container init_process_share= av.open("test.mkv","w")
 
         # print("init_container...")
-        self.video_stream = self.container.add_stream('mpeg2video', rate=self.framerate)
+        self.video_stream = self.container.add_stream('h264', rate=self.framerate)
         self.video_stream.pix_fmt = 'yuv420p'
         self.video_stream.width = self.width
         self.video_stream.height = self.height

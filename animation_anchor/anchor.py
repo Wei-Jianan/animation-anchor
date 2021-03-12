@@ -57,6 +57,8 @@ class Anchor:
         v = ffmpeg.input(video_file.name).video
         a = ffmpeg.input(wav_path).audio
         jointed = ffmpeg.concat(v, a, v=1, a=1)
+        # cmd = ffmpeg.output(jointed, video_with_voice_file.name).get_args(overwrite_output=True)
+        # print(' '.join(cmd))
         ffmpeg.output(jointed, video_with_voice_file.name).run(overwrite_output=True, quiet=True)
 
         return video_with_voice_file

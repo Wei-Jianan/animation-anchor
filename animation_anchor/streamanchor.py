@@ -29,7 +29,7 @@ from .utils import LOG
 @unique
 class AnchorState(Enum):
     ready = 'not running'
-    stop = 'stoped'
+    stop = 'stopped'
     listening = 'waiting'
     speaking = 'speaking'
 
@@ -95,13 +95,9 @@ class StreamAnchor(Anchor):
 
         video_frame = video_frame.copy()
         if self.debug:
-            # video_frame = cv2.putText(video_frame, text=str(text_id), )
-            # cv2.putText(video_frame, str(text_id), (50, 150), cv2.FONT_HERSHEY_COMPLEX, 6, (0, 0, 255), 25)
             font = cv2.FONT_HERSHEY_SIMPLEX
             datestr = str(datetime.datetime.now())
             cv2.putText(video_frame, datestr, (10, 100), font, 0.5, (0, 255, 255), 2, cv2.LINE_AA)
-            # cv2.putText(video_frame, datestr, (10, 100), font, 0.5, (0, 255, 255), 2, cv2.LINE_AA)
-            LOG.warning(type(video_frame))
             # video_frame = np.array(video_frame)
         LOG.info(
             'iterate a frame pair: text_id: {}.'.format(text_id))
@@ -120,7 +116,7 @@ class StreamAnchor(Anchor):
         # self.task_queue
 
     def put_text_wav(self, text, wav_path, text_id, template_name='aide'):
-        LOG.info('{} get wav and text, and start preprocessing'.format(self))
+        LOG.info('{} get wav and text: {}, and start preprocessing'.format(self, text))
         with self.task_mutex:
             if self.task_state == AnchorState.ready:
                 raise AnchorStateException(' Stream Anchor should be start first before iter')
@@ -128,6 +124,7 @@ class StreamAnchor(Anchor):
         viseme_durations = list(self.parser.phoneme_durations2viseme_durations(phoneme_durations))
         viseme_frame_seq = self.viseme_frame_generator.generate(viseme_durations)
         wav_frame_seq = self._split_wav(wav_path)
+        LOG.info('{} text: {} preprocessing done'.format(self, text))
         self._generate_speaking(viseme_frame_seq, wav_frame_seq, text_id=text_id, template_name=template_name)
 
     def _split_wav(self, wav_path) -> Iterable[np.ndarray]:
@@ -191,13 +188,13 @@ class StreamAnchor(Anchor):
 
     def _generate_speaking(self, viseme_frame_seq: Sequence[Tuple[np.ndarray, np.ndarray]],
                            wav_frame_seq: Sequence[np.ndarray], template_name, text_id=None):
-        LOG.info('put speaking anchor {} {} frames in task queue'.format(self, len(viseme_frame_seq)))
         with self.task_mutex:
             self.task_state = AnchorState.speaking
             self.task_queue.put(AnchorTask(viseme_frame_seq=viseme_frame_seq,
                                            wav_frame_seq=wav_frame_seq,
                                            anchor_state=AnchorState.speaking, text_id=text_id,
                                            template_name=template_name))
+        LOG.info('put speaking anchor {} {} frames in task queue'.format(self, len(viseme_frame_seq)))
 
     def generate(self):
         '''
@@ -210,6 +207,7 @@ class StreamAnchor(Anchor):
             LOG.info('generating thread stop')
             self.stream.put(None)
             return
+            # TODO stop here should be the proper place
             # with self.state_mutex:
             #     self.current_state = AnchorState.stop
             # break

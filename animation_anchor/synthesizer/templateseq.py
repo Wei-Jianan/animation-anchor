@@ -126,9 +126,10 @@ class TemplateFrameSeq:
         R = (U * Vt).T
         # print('shape before stacks: ', (s2 / s1) * R)
         # print('shape before stacks: ', (s2 / s1) * R * c1.T)
-        return numpy.vstack([numpy.hstack(((s2 / s1) * R,
+        M = numpy.vstack([numpy.hstack(((s2 / s1) * R,
                                            c2.T - (s2 / s1) * R * c1.T)),
                              numpy.matrix([0., 0., 1.])])
+        return M
 
 
     def get_face_mask(self, im):

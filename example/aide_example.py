@@ -65,7 +65,7 @@ if __name__ == '__main__':
 
         anchor_live = AnchorLive(init_args["streamID"], init_args["videoInfo"], init_args["audioInfo"],
                                  # speack_over_callback=init_args["speack_over_callback"],
-                                 rtsp_url="rtsp://localhost:8554", rtsp_option='tcp',
+                                 rtsp_url="rtsp://192.168.75.10:8554", rtsp_option='tcp',
                                  viseme_kind='aide',
                                  viseme_fixed_landmarks=[[0, 0], [60, 36]],
                                  template_fixed_landmarks=[[210, 234], [270, 270]],
